@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>index.html</file>
+        <file>codemirror.js</file>
+        <file>codemirror.css</file>
+        <file>javascript.js</file>
+        <file>default.css</file>
+        <file>cobalt.css</file>
+        <file>elegant.css</file>
+        <file>neat.css</file>
+        <file>night.css</file>
+    </qresource>
+</RCC>

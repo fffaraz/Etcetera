@@ -1,0 +1,73 @@
+<html><head><title>Box of Marbles</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=no;">
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #444;
+  font-family: Helvetica, Arial;
+}
+
+* {
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  -webkit-text-size-adjust: none;
+}
+
+#text {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  border: none;
+  text-align: center;
+  color: white;
+  width: 100%;
+  height: 100%;
+}
+
+.tap {
+  position: absolute;
+  left: 300px;
+  top: 300px;
+  width: 200px;
+  height: 200px;
+  border-radius: 100px;
+  border: 3px solid yellow;
+  -webkit-transform: translate(-100px, -100px) scale(0.7,0.7);
+  -webkit-transition: -webkit-transform 200ms ease-out;
+  -moz-transform: scale(0,0);
+  -o-transform: scale(0,0);
+}
+
+#hint {
+  position: absolute;
+  left: 0px;
+  top: 100px;
+  width: 100%;
+  color: #999;
+  text-align: center;
+  font-size: 1em;
+  -webkit-transition: all 3s ease-out;
+  -moz-transition: all 3s ease-out;
+  -o-transition: all 3s ease-out;
+}
+
+#hint img {
+  vertical-align: middle;
+  width: 5em;
+}
+
+</style>
+</head>
+<body>
+<div id='text'>Box of Marbles (by Ariya Hidayat)</div>
+<script src="protoclass.js"></script>
+<script src="box2d.js"></script>
+<script src="marblebox.js"></script>
+<!-- http://www.openclipart.org/detail/89947 -->
+<div id='hint'><img src='pointing_finger_01.png'>Tap to add some marbles!</div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+
+
+Check-out Chipmunk physics engine:
+
+  svn checkout http://chipmunk-physics.googlecode.com/svn/tags/Chipmunk-5.2.0 chipmunk
+
+(5.2.0 is used instead of trunk, because this example is known to work with
+that version and not necessarily any future versions).
+
+To improve the performance on embedded platform, force the use of 'float' instead of 'double':
+
+  patch chipmunk/include/chipmunk/chipmunk_types.h force-float.patch

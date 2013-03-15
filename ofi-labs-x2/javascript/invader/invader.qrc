@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>magic.js</file>
+        <file>invader.js</file>
+        <file>i.gif</file>
+        <file>p.gif</file>
+        <file>s.gif</file>
+        <file>x.gif</file>
+    </qresource>
+</RCC>

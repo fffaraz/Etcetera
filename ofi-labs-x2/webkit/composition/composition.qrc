@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>index.html</file>
+        <file>leaves.css</file>
+        <file>leaves.js</file>
+        <file>images/backgroundLeaves.jpg</file>
+        <file>images/realLeaf1.png</file>
+        <file>images/realLeaf3.png</file>
+        <file>images/realLeaf2.png</file>
+        <file>images/realLeaf4.png</file>
+        <file>images/textBackground.png</file>
+    </qresource>
+</RCC>

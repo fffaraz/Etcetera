@@ -1,0 +1,27 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <title>Flower Power</title>
+        <meta name="author" content="Alessandro Portale" />
+        <meta name="description" content="Spread flowers on the grass and don't let the bugs take over." />
+        <meta name="keywords" content="flowers, bugs, interactive" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable = no" />
+        <style type="text/css">
+            body { margin: 0; overflow: hidden; }
+        </style>
+        <script type="text/javascript" src="grass.js"></script>
+        <script type="text/javascript" src="flowers.js"></script>
+        <script type="text/javascript" src="bugs.js"></script>
+        <script type="text/javascript" src="flowerpower.js"></script>
+        <script type="text/javascript">
+            window.onload = function()
+            {
+                initFlowerPower(document.getElementsByTagName('body')[0]);
+            }
+        </script>
+    </head>
+    <body>
+    </body>
+</html>

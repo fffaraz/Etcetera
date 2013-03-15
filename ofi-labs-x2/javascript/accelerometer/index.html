@@ -1,0 +1,40 @@
+<html><head><title>Detect accelerometer support</title>
+<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale= 1.0; user-scalable=no;">
+<script>
+window.addEventListener("load", function () {
+    window.setTimeout(function () {
+        var round = function (x) {
+            return Math.round(x * 100) / 100.0;
+        };
+
+        if ('ondevicemotion' in window) {
+            document.getElementById('support').innerHTML = 'Yes';
+            window.addEventListener('devicemotion', function (e) {
+                var s = '<br>x: ' + round(e.accelerationIncludingGravity.x) +
+                    '<br>y: ' + round(e.accelerationIncludingGravity.y) +
+                    '<br>z: ' + round(e.accelerationIncludingGravity.z);
+                document.getElementById('status').innerHTML = s;
+            }, false);
+        } else {
+            if ('ondeviceorientation' in window) {
+                document.getElementById('support').innerHTML = 'Yes';
+                window.addEventListener('deviceorientation', function (e) {
+                    var s = '<br>Alpha: ' + round(e.alpha) +
+                        '<br>Beta: ' + round(e.beta) +
+                        '<br>Gamma: ' + round(e.gamma);
+                    document.getElementById('status').innerHTML = s;
+                }, false);
+            }
+        }
+    }, 0);
+}, false);
+</script>
+</head>
+<body>
+<p>Support for accelerometer: <b><span id="support">No</span>.</b></p>
+<p>Current acceleration: <b><span id="status">Unknown.</span></b></p>
+<p>User agent:
+<script>document.write(navigator.userAgent);</script>
+</p>
+</body>
+</html>

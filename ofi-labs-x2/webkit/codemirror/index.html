@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <title>CodeMirror 2: JavaScript mode</title>
+    <link rel="stylesheet" href="codemirror.css">
+    <script src="codemirror.js"></script>
+    <script src="javascript.js"></script>
+    <link rel="stylesheet" href="default.css">
+    <link rel="stylesheet" href="cobalt.css">
+    <link rel="stylesheet" href="elegant.css">
+    <link rel="stylesheet" href="neat.css">
+    <link rel="stylesheet" href="night.css">
+    <style type="text/css">
+    body { margin: 0 }
+    .CodeMirror-scroll { height: 100% }
+    </style>
+  </head>
+  <body>
+<div><textarea id="code" name="code">
+</textarea></div>
+    <script>
+      var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+        lineNumbers: true,
+        matchBrackets: true
+      });
+    </script>
+  </body>
+</html>

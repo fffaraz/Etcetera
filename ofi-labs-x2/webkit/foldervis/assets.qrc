@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>index.html</file>
+        <file>webtreemap.js</file>
+        <file>bootstrap.js</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,14 @@
+{
+  "name": "Christmas Blaster",
+  "description": "Spread Christmas decoration while the snow falls.",
+  "version": "1",
+  "app": {
+    "launch": {
+      "local_path": "index.html"
+    }
+  },
+  "icons": {
+    "16": "16.png",
+    "128": "128.png"
+  }
+}

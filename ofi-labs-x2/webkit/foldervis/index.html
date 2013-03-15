@@ -1,0 +1,74 @@
+<html><head>
+<script src='webtreemap.js'></script>
+<style>
+body {
+  font-family: Helvetica, Arial, sans-serif;
+  padding: 0;
+  margin: 0;
+  background: white;
+  color: black;
+}
+
+#progress {
+  margin-top: 100px;
+  text-align: center;
+}
+
+#map {
+  width: 600px;
+  height: 600px;
+  cursor: pointer;
+  -webkit-user-select: none;
+}
+
+.webtreemap-node {
+  position: absolute;
+  overflow: hidden;
+  border: solid 1px 888;
+  background: #002;
+  -webkit-transition: top 0.3s, left 0.3s, width 0.3s, height 0.3s;
+}
+
+.webtreemap-node:hover {
+  border-color: #cc0;
+}
+
+.webtreemap-level4 {
+  border: solid 1px #044;
+  background-color: #005;
+}
+.webtreemap-level3 {
+  border: solid 1px #066;
+  background-color: #008;
+}
+.webtreemap-level2 {
+  border: solid 1px #088;
+  background-color: #00c;
+}
+.webtreemap-level1 {
+  border: solid 1px #0aa;
+  background-color: #00e;
+}
+.webtreemap-level0 {
+  border: solid 1px #0cc;
+  background-color: #00e;
+}
+
+.webtreemap-caption {
+  font-family: sans-serif;
+  font-size: 11px;
+  padding: 2px;
+  text-align: center;
+  color: #ddd;
+}
+
+.webtreemap-node:hover > .webtreemap-caption {
+  color: #0ff;
+}
+</style>
+</head>
+<body>
+<p id="progress"></p>
+<div id='map'></div>
+</body>
+</html>

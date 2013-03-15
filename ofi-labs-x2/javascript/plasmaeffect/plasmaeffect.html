@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Plasma effect in HTML5 Canvas</title>
+        <meta charset="UTF-8">
+    </head>
+    <body style="background: black; color: white">
+        <table border="0" align="center" style="margin-bottom: 5px">
+            <tr>
+                <td style="padding: 0px 10px">
+                    <p style="color: darkgray">
+                        For details on this demo, please see <a href="http://bit.ly/x2-plasmaeffect"><font color="#0099dd">this article</font></a>.<br/>
+                        <span style="color: red">Warning: </span>it can become addictive and make you see things after you stop.
+                    </p>
+                </td>
+                <td>
+                    <h1 align="center"><span id="fps" style="color: yellow">00</span> FPS</h1>
+                </td>
+            </tr>
+        </table>
+        <div align="center">
+            <canvas align="center" id="plasmaeffect">
+                If you can read this, it unfortunately means that your browser is not capable of
+                displaying this page correctly. Please try it in a browser that supports HTML5
+                Canvas.
+            </canvas>
+        </div>
+        <br/>
+        <table border="0" align="center">
+            <tr>
+                <td align="center" style="color: #00aa00">0-9</td>
+                <td align="left">load preset parameters (try with different math transformations)</td>
+            </tr>
+            <tr>
+                <td align="center" style="color: #00aa00">Arrows</td>
+                <td align="left">change four parameters (keep holding key)</td>
+            </tr>
+            <tr>
+                <td align="center" style="color: #00aa00">Shift+Arrows</td>
+                <td align="left">change another four parameters (keep holding keys)</td>
+            </tr>
+            <tr>
+                <td align="center" style="color: #00aa00">T, S</td>
+                <td align="left">change base math transformation</td>
+            </tr>
+            <tr>
+                <td align="center" style="color: #00aa00">R, G, B</td>
+                <td align="left">change color pattern</td>
+            </tr>
+            <tr>
+                <td align="center" style="color: #00aa00">+, -</td>
+                <td align="left">scale canvas</td>
+            </tr>
+            <tr>
+                <td align="center" style="color: #00aa00">O, P</td>
+                <td align="left">change animation speed</td>
+            </tr>
+            <tr>
+                <td align="center" style="color: #00aa00">H</td>
+                <td align="left">toggle animation</td>
+            </tr>
+        </table>
+        <br/>
+        <p style="color: #999999; text-align: center">
+            (C) 2010
+            <a href="http://helderfoo.blogspot.com"><font color="#0099dd">Helder Correia</font></a>
+        </p>
+        <script type="text/javascript" src="plasmaeffect.js"></script>
+    </body>
+</html>

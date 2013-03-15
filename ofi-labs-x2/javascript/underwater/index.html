@@ -1,0 +1,59 @@
+<html><head><title>Underwater effect with Canvas</title>
+<meta id="viewport" name="viewport" content="width=device-width target-densityDpi=device-dpi initial-scale=0.5 user-scalable=no maximum-scale=0.5">
+<style>
+body {
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+h1 {
+    font-size: 1em;
+}
+</style>
+<script src="underwater.js"></script>
+<script>
+function imageLoaded() {
+    var canvas, image, fx, updater;
+
+    canvas = document.getElementById('surface');
+    image = document.getElementById('image');
+    fx = new Underwater(canvas, image, 14, 0.6);
+
+    document.getElementById('info').textContent = 'Starting...';
+
+    updater = window.setInterval(function () {
+        var el = document.getElementById('info'),
+        fps = fx.frameRate();
+        el.textContent = 'Frame rate: ' + fps.toFixed(1) +
+        ' frames/sec';
+    }, 1000);
+
+    window.setTimeout(function () {
+        fx.start();
+    }, 300);
+}
+</script>
+</head>
+<body>
+<h1>Underwater Effect with HTML5 Canvas</h1>
+<p id="info">Loading... Please wait.</p>
+<canvas width="400" height="400" id="surface">
+</canvas>
+<img id="image" src="bridge.jpg" style="display: none" onload="imageLoaded()"/>
+<script>
+window.onload = function () {
+    var el;
+
+    // Reset scaling on non-retina display
+    if (window.devicePixelRatio === 1) {
+        if (window.innerWidth === 2 * screen.width ||
+            window.innerWidth === 2 * screen.height) {
+            el = document.getElementById('viewport');
+            el.setAttribute('content', 'width=device-width target-densityDpi=device-dpi ' +
+                'initial-scale=1 maximum-scale=1 user-scalable=no');
+            document.head.appendChild(el);
+        }
+    }
+};
+</script>
+</body>
+</html>

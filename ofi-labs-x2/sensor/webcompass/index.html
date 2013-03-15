@@ -1,0 +1,88 @@
+<html><head><title>Compass</title>
+<link rel="apple-touch-icon" href="compass-icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width maximum-scale=1 initial-scale=1 user-scalable=no">
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Helvetica, Arial;
+    overflow: hidden;
+}
+
+* {
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    -webkit-text-size-adjust: none;
+}
+
+#compass {
+    width: 0px;
+    -webkit-backface-visibility: hidden;
+    -webkit-transition: -webkit-transform 100ms linear;
+}
+
+p {
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<img src="compass.png" id="compass"/>
+<p id="status"> </p>
+<script>
+window.setTimeout(function () {
+    var dir = 0,
+        ref = 0;
+
+    if ('ondeviceorientation' in window) {
+
+        window.addEventListener('deviceorientation', function(e) {
+            var direction, delta, heading;
+
+            if (typeof e.webkitCompassHeading !== 'undefined') {
+                direction = e.webkitCompassHeading;
+                if (typeof window.orientation !== 'undefined') {
+                    direction += window.orientation;
+                }
+            } else {
+                // http://dev.w3.org/geo/api/spec-source-orientation.html#deviceorientation
+                direction = 360 - e.alpha;
+            }
+
+            delta = Math.round(direction) - ref;
+            ref = Math.round(direction);
+            if (delta < -180)
+                delta += 360;
+            if (delta > 180)
+                delta -= 360;
+            dir += delta;
+
+            heading = direction;
+            while (heading >= 360) {
+                heading -= 360;
+            }
+            while (heading < 0) {
+                heading += 360;
+            }
+            heading = Math.round(heading);
+            document.getElementById('status').textContent = 'Heading: ' + heading + '\u00b0';
+        });
+
+        window.setInterval(function() {
+            document.getElementById('compass').style.webkitTransform = 'rotate(' + dir + 'deg)';
+        }, 100);
+
+        document.getElementById('compass').style.width = Math.min(screen.width, screen.height) + 'px';
+    } else {
+        document.getElementById('status').textContent = 'Sorry! The browser does not support Device Orientation API.';
+        document.getElementById('status').style.position = 'absolute';
+        document.getElementById('status').style.width = '100%';
+        document.getElementById('status').style.top = '50%';
+    }
+}, 200);
+</script>
+</body>
+</html>

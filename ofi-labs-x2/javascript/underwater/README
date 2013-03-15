@@ -1,0 +1,7 @@
+This example can't be run from a local file system. Thus, host the files
+in a simple web server (lighttpd is recommended) and launch the browser
+pointing to the web server.
+
+The reason is to satisfy the same origin policy. See section 4.8.11.13
+about "Security with canvas elements" in the WHATWG HTML Living Standard.
+

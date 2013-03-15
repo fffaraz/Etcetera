@@ -1,0 +1,17 @@
+--- chipmunk/include/chipmunk/chipmunk_types.h.orig	2010-08-07 11:36:52.048049625 -0700
++++ chipmunk/include/chipmunk/chipmunk_types.h	2010-08-07 11:37:08.092046908 -0700
+@@ -2,13 +2,7 @@
+    #import "TargetConditionals.h"
+ #endif
+ 
+-// Use single precision floats on the iPhone.
+-#if TARGET_OS_IPHONE==1
+-	#define CP_USE_DOUBLES 0
+-#else
+-	// use doubles by default for higher precision
+-	#define CP_USE_DOUBLES 1
+-#endif
++#define CP_USE_DOUBLES 0
+ 
+ #if CP_USE_DOUBLES
+         typedef double cpFloat;
