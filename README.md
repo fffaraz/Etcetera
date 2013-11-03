@@ -1,4 +1,4 @@
 Etcetera!
 =======
 
-Some random piece of code
+My collection of useful code snippets/recipes/scripts/macros
