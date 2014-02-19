@@ -1,0 +1,46 @@
+admin
+test
+administrator
+support
+aaa
+rot
+qwerty
+admin1
+user
+adm
+manager
+sysadmin
+Admin
+
+21144 [pwd] => admin
+14377 [pwd] => 123456
+14087 [pwd] => password
+11366 [pwd] => 12345678
+10409 [pwd] => 666666
+9700 [pwd] => 111111
+9336 [pwd] => 1234567
+8902 [pwd] => qwerty
+8269 [pwd] => 123321
+8193 [pwd] => 12345
+7752 [pwd] => 123123
+7692 [pwd] => 159753
+7364 [pwd] => 1234567890
+6901 [pwd] => 0
+6609 [pwd] => 123qwe
+6179 [pwd] => 123654
+6160 [pwd] => #@F#GBH$R^JNEBSRVWRVW
+6067 [pwd] => 112233
+5964 [pwd] => 159357
+5392 [pwd] => $#GBERBSTGBR%GSERHBSR
+5326 [pwd] => 12345qwe
+5281 [pwd] => 1234
+5141 [pwd] => 654321
+5060 [pwd] => 147852
+5058 [pwd] => %G#GBAEGBW%HBFGBFXGB
+5024 [pwd] => RGA%BT%HBSERGAEEAHAEH
+4963 [pwd] => 222222
+4928 [pwd] => 7777777
+4900 [pwd] => 147258
+4898 [pwd] => 123
+4861 [pwd] => aethAEHBAEGBAEGEE%
+4838 [pwd] => 121212
