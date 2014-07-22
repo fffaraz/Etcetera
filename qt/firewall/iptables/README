@@ -1,0 +1,34 @@
+
+
+
+Notes on firewall set up for laptop
+
+iptables.sh is an init script that lives in /etc/init.d
+Usage: iptables.sh {start|home|public|stop}
+       Defaults to home firewall
+
+
+
+/etc/iptables
+
+symbolic link to default firewall - used by /etc/init.d/iptables.sh start
+lrwxrwxrwx 1 root root   17 2009-12-10 21:09 firewall-default.txt -> firewall-home.txt
+
+used by /etc/init.d/iptables.sh home
+-rw-r--r-- 1 root root  376 2009-12-10 06:47 firewall-home.txt
+
+used by /etc/init.d/iptables.sh public
+-rw-r--r-- 1 root root  429 2009-12-10 06:48 firewall-public.txt
+
+/etc/init.d/iptables.sh stop
+clears all firewall rools
+
+
+shell script to build firewall-home.txt
+-rwxr--r-- 1 root root 1180 2009-12-10 08:25 firewall-laptop-home.sh
+
+shell script to build firewall-public.txt
+-rwxr--r-- 1 root root  991 2009-12-10 08:54 firewall-laptop-public.sh
+
+
+
