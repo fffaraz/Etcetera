@@ -1,0 +1,1900 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.0//EN">
+<html>
+<head>
+<title>
+Prime Number Hide-and-Seek: How the RSA Cipher Works
+</title>
+</head>
+<body bgcolor="#FFFFFF" text="#000000">
+<p align="center">
+<center>
+<h1>
+Prime Number Hide-and-Seek: How the RSA Cipher Works
+</h1>
+</center>
+<p>
+<ul>
+Table of Contents
+<li><a href="#0">Preface: What is This?</a>
+<li><a href="#1">Introduction: The Idea of a Trapdoor Function</a>
+<li><a href="#2">Background, Part I: How to Calculate with Exponents</a>
+<li><a href="#3">Background, Part II: Modulus Arithmetic</a>
+<li><a href="#4">Background, Part III: The Fundamental Theorem of Arithmetic</a>
+<li><a href="#5">Background, Part IV: Relatively Prime Numbers</a>
+<li><a href="#6">Euler's Totient Function</a>
+<li><a href="#7">Euler's Totient Theorem</a>
+<li><a href="#8">Variations on a Theme</a>
+<li><a href="#9">The Plot Thickens</a>
+<li><a href="#10">Does This Really Work?</a>
+<li><a href="#11">Making a Pair of Keys</a>
+<li><a href="#12">An Example</a>
+<li><a href="#13">How to Crack RSA</a>
+<li><a href="#14">How to Make RSA Uncrackable</a>
+<li><a href="#15">Huge Exponents in Modulus Arithmetic</a>
+<li><a href="#16">Huge Factors in Modulus Arithmetic</a>
+<li><a href="#17">Safety in Numbers</a>
+<li><a href="#18">Summing Up</a>
+<li><a href="#19">References</a>
+</ul>
+
+<p>
+<a name="0"></a>
+<h2>
+Preface: What is This?
+</h2>
+<p>
+The RSA cipher is a fascinating example of how some of the most
+abstract mathematical subjects find applications in the real world.
+Few are the mathematicians who study creatures like the prime numbers
+with the hope or even desire for their discoveries to be useful
+outside of their own domain. But every now and then that is exactly
+what happens.
+<p>
+This text explains the mathematics behind RSA -- how and why it works.
+The intended audience is just about anyone who is interested in the
+topic and who can remember a few basic facts from algebra: what a
+variable is, the difference between a prime number and a composite
+number, and the like.
+<p>
+The most important mathematical facts necessary for understanding
+RSA's foundations are reviewed near the beginning. Even if you are
+familiar with everything covered in these sections, I would recommend
+that you at least skim through them.
+<p>
+In one or two places, I have specifically targeted an explanation to
+what I consider to be the average computer programmer, leveraging
+analogous concepts in programming and general mathematics.
+<p>
+Before getting started, I should make some observations on the
+mathematical notation used here.
+<p>
+For the most part, where notations for the same idea differ between
+standard mathematics and the common practices among computer
+programmers, I have stuck with the mathematicians. This is, after all,
+a mathematical subject. However, I have deviated in a few places where
+there was too much opportunity for confusion. I have used * to denote
+multiplication, and have completely avoided "implied" multiplication
+(i.e., using PQ as shorthand for P&nbsp;*&nbsp;Q). Since not all web browsers
+can display superscripts, I have used ^ to denote exponentiation.
+(This necessitates more parenthesizing than would normally be used.)
+The mathematician's three-bar congruency symbol is not available, so I
+have made do with = instead. Variables are always named with a single
+capital letter.
+<p>
+Finally, please note that throughout the text I use the word <def>number</def>
+to refer specifically to a positive integer -- what are sometimes
+referred to as the <def>natural</def> numbers, or <def>counting</def> numbers.
+<p>
+<hr>
+<p>
+<a name="1"></a>
+<h2>
+Introduction: The Idea of a Trapdoor Function
+</h2>
+<p>
+What a mathematician refers to as a <def>function</def> is very similar to a
+function in computer programming. It is, in essence, an abbreviation.
+For example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>F(X) = 7 * X + 43.</td>
+</tr>
+</table>
+<p>
+If X happens to be 3, then F(X) will be 64. So, "F(3)" is shorthand
+for "7&nbsp;*&nbsp;3&nbsp;+&nbsp;43".
+<p>
+The same function in a C program might look like:
+<p>
+<pre>
+        int F(int x)
+        {
+            return 7 * x + 43;
+        }
+</pre>
+<p>
+Of course, in a computer program, functions are used to encapsulate
+all kinds of algorithms, and frequently make use of external variables
+and the like. In mathematics, however, a function is used solely for
+the number it returns. And, given a certain number as input, they will
+always return the same output. (Thus, rand() would not qualify as a
+mathematical function, unless it were written so that the seed value
+was passed in as an input parameter.)
+<p>
+Mathematicians often consider how to construct a function's <def>inverse</def>
+-- taking a function and making a new one that "goes in the other
+direction", so to speak:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>G(X) = (X - 43) / 7.</td>
+</tr>
+</table>
+<p>
+G(64) is equal to 3, and in general, G(F(X)) is equal to X. Therefore,
+G is F's inverse. Not all functions are invertible, of course.
+Clearly, the function:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>F(X) = X * 0</td>
+</tr>
+</table>
+<p>
+cannot be inverted. (Because how could G(F(X)) return X when F(X) is
+always zero?)
+<p>
+Usually, when you have a mathematical function for which an inverse
+does exist, constructing it is not too difficult. In fact, it is often
+transparent. Typically, you can just run through the steps backwards,
+subtracting where the original function adds, and so on. But can it
+be done for <em>every</em> invertible function?
+<p>
+To put the question in terms of programming, imagine that there are
+two functions:
+<p>
+<pre>
+        int foo(int x);
+        int bar(int x);
+</pre>
+<p>
+foo() and bar() work like mathematical functions -- they do nothing
+but compute a return value, and given the same number for input, they
+will always produce the same output. (And pretend for the moment that
+this is on a machine where integers can be arbitrarily large.) Suppose
+you are told that bar() is the inverse of foo(). The statement:
+<p>
+<pre>
+        x == bar(foo(x))
+</pre>
+<p>
+is always true, as long as x meets foo()'s requirements for a valid
+argument.
+<p>
+Now, imagine that you have the source code for foo(), but not for
+bar(). Can you write your own replacement for bar(), just by examining
+foo()?
+<p>
+It seems that you ought to be able to. There are no secrets as to what
+foo() does, after all. You can run foo() with different inputs as many
+times as you like. You already know that bar() exists, somewhere, so
+you know that it is <em>possible</em> to write. Is it guaranteed that you can
+reconstruct it?
+<p>
+Theoretically speaking, the answer is yes. Given such an function, it
+is always possible to construct its inverse. However, if we also throw
+in the tiny constraint that you have to finish before the heat-death
+of the universe, the answer subtly changes.
+<p>
+There are some special functions that, though what they do is simple
+enough, and how they do what they do is utterly transparent, figuring
+out how to <em>undo</em> what they do is a diabolical task. Such a creature is
+a <def>trapdoor function</def>. Anyone can fall through a trapdoor, but only
+those who know where the hidden lever is can climb back out again.
+<p>
+In 1975, Whitfield Diffie, Martin E. Hellman, and Ralph Merkle
+realized that a trapdoor function could be the basis for an entirely
+new kind of cipher -- one in which the decoding method could remain
+secret even when the encoding method was public knowledge. Diffie and
+Hellman published a paper in 1976 that described this idea, and
+offered some examples of weak trapdoor functions. And in 1977, Ronald
+L. Rivest, Adi Shamir, and Leonard Adleman outlined, in an MIT
+technical memo, an excellent candidate that became the basis for the
+RSA cipher.
+<p>
+What follows is a description of that function.
+<p>
+<hr>
+<p>
+<a name="2"></a>
+<h2>
+Background, Part I: How to Calculate with Exponents
+</h2>
+<p>
+Here's a quick refresher on how to combine exponents. Recall that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=right>N^2</td>
+<td align=left>= N * N,</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>N^3</td>
+<td align=left>= N * N * N,</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>N^4</td>
+<td align=left>= N * N * N * N,</td>
+</tr>
+</table>
+<p>
+<p>
+and so on. For example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>2^7 = 2 * 2 * 2 * 2 * 2 * 2 * 2 = 128.</td>
+</tr>
+</table>
+<p>
+If we fiddle with exponents for a bit, we will quickly realize that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>N^E * N = N^(E + 1).</td>
+</tr>
+</table>
+<p>
+So, for example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>2^7 * 2 = 128 * 2 = 256 = 2^8.</td>
+</tr>
+</table>
+<p>
+Building upon this, we can also see that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>N^E * N * N = N^(E + 2).</td>
+</tr>
+</table>
+<p>
+But N&nbsp;*&nbsp;N can also be written as N^2:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>N^E * N^2 = N^(E + 2).</td>
+</tr>
+</table>
+<p>
+We can extrapolate from this, and derive a more general rule -- namely:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>N^A * N^B = N^(A + B).</td>
+</tr>
+</table>
+<p>
+And, if we repeated this process on the next level up, we would find
+that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>(N^A)^B = N^(A * B).</td>
+</tr>
+</table>
+<p>
+These two simple facts are very useful when handling exponent-laden
+formulas.
+<p>
+<a name="3"></a>
+<h2>
+Background, Part II: Modulus Arithmetic
+</h2>
+<p>
+Most computer programmers are familiar with modulus as a "remainder"
+operator, usually denoted by "%", which gives the remainder of an
+integer division instead of the quotient. For example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>27 % 12 = 3.</td>
+</tr>
+</table>
+<p>
+Though the idea is the same, the mechanics here are slightly different
+from what mathematicians refer to as <def>modulus arithmetic</def>. In essence,
+modulus arithmetic consists of taking the infinitely long number-line
+and coiling it around a finite circle. All the numbers that land on
+the same point along the circle's edge are considered interchangeable,
+or <def>congruent</def>. Thus, the analogue to the above example in modulus
+arithmetic would be expressed as:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>27 = 3 (mod 12),</td>
+</tr>
+</table>
+<p>
+or, in words:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>27 is congruent to 3, modulo 12.</td>
+</tr>
+</table>
+<p>
+(Though note that mathematicians actually use a three-barred version
+of the equal sign to indicate congruency.) In this case, 12 is the
+<def>modulus</def> that we are working under, and the equation simply tells us
+that, under a modulus of 12, 27 and 3 are considered to be the same
+number. Likewise:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>11 + 16 = 3 (mod 12)</td>
+</tr>
+</table>
+<p>
+reads as:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>11 plus 16 is congruent to 3, modulo 12.</td>
+</tr>
+</table>
+<p>
+Modulus arithmetic is sometimes called <def>clockface arithmetic</def> -- if
+it's currently 11 o'clock, then 16 hours later it will be 3 o'clock.
+(Of course, the analogy is less perfect when the modulus is something
+other than 12.)
+<p>
+An important feature of modulus arithmetic is that you can replace the
+terms of an addition operation with congruent values, and still get
+the right answer:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>16 = 4 (mod 12), therefore</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>11 + 16 = 11 + 4 = 3 (mod 12).</td>
+</tr>
+</table>
+<p>
+Another example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>9835 = 7 (mod 12), and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>1176 = 0 (mod 12), therefore</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>9835 + 1176 = 7 + 0 = 7 (mod 12).</td>
+</tr>
+</table>
+<p>
+Even better, this trick also works with multiplication:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>9835 * 1176 = 7 * 0 = 0 (mod 12)</td>
+</tr>
+</table>
+<p>
+(and, if we check, we will see that, yes, 9835&nbsp;*&nbsp;1176 is 11565960,
+and 11565960&nbsp;=&nbsp;0&nbsp;(mod&nbsp;12)).
+<p>
+If our modulus was 10, then modulus arithmetic would be equivalent to
+ignoring all but the last digit in our numbers:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>37 = 7 (mod 10),</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>287 + 482 = 9 (mod 10), and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>895 * 9836 = 0 (mod 10).</td>
+</tr>
+</table>
+<p>
+And, in a sense, a C program does all of its calculations in modulus
+arithmetic. Since integer calculations in C are permitted to overflow,
+the high bits silently falling off into the bit bucket, a C program
+using 32-bit integers is really doing all of its arithmetic modulo
+2^32.
+<p>
+As you might imagine, some calculations that are time-consuming and
+produce huge numbers become trivial in modulus arithmetic. The ability
+to reduce values to their remainders before doing the actual
+calculation keeps the calculations from getting out of hand.
+<p>
+<a name="4"></a>
+<h2>
+Background, Part III: The Fundamental Theorem of Arithmetic
+</h2>
+<p>
+The <def>Fundamental Theorem of Arithmetic</def> states that for every number,
+there is exactly one way to factor that number into primes -- and vice
+versa: every selection of primes multiplies into a different number.
+For example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>1176 = 2 * 2 * 2 * 3 * 7 * 7, or</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>1176 = 2^3 * 3^1 * 7^2.</td>
+</tr>
+</table>
+<p>
+It is guaranteed that there is no other way to break 1176 into prime
+factors. And, certainly, any time you take three 2s, two 7s, and a
+three, you're always going to get 1176 when you multiply them
+together. The Fundamental Theorem of Arithmetic assures us that both
+these things are true for <em>every</em> number.
+<p>
+(By the way, this is one of the reasons that 1 is not considered to be
+a prime number: if it were, then each number would have an infinite
+number of prime factorizations, all differing by how many 1s were
+included. Instead, 1 is considered to have no prime factors at all,
+and we say that a number is prime if it has exactly one prime factor
+-- namely itself.)
+<p>
+Put another way, the Fundamental Theorem of Arithmetic states that the
+set of all numbers and the set of all selections of prime numbers are
+"isomorphic" -- there is a perfect one-to-one mapping between the two.
+A number is therefore <em>defined</em> by its prime factorization.
+<p>
+<a name="5"></a>
+<h2>
+Background, Part IV: Relatively Prime Numbers
+</h2>
+<p>
+The <def>greatest common divisor</def> (abbreviated GCD) of two numbers is the
+largest number that evenly divides both of them. For example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>GCD(15, 10) = 5,</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>GCD(18, 10) = 2,</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>GCD(21, 10) = 1, and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>GCD(170, 102) = 34.</td>
+</tr>
+</table>
+<p>
+Or, another way to look at it is to say that the GCD is the
+intersection of the two numbers' set of prime factors:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>GCD((2^3 * 3^1 * 7^2), (2^2 * 5^1 * 7^3)) = 2^2 * 7^2, so</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>GCD(1176, 6860) = 196.</td>
+</tr>
+</table>
+<p>
+When two numbers have no common factors, their GCD will be 1, and the
+two numbers are said to be <def>relatively prime</def> (or <def>coprime</def>). For
+example, we can see in our list up above that 21 and 10 are relatively
+prime.
+<p>
+Since a prime number has no factors besides itself, clearly a prime
+number is relatively prime to every other number (except for multiples
+of itself). And the same can be said of the number 1.
+<p>
+Okay. Enough background material. Let's get to the good stuff.
+<p>
+<hr>
+<p>
+<a name="6"></a>
+<h2>
+Euler's Totient Function
+</h2>
+<p>
+<def>Euler's Totient Function</def> is denoted by the Greek letter phi, and is
+defined as follows:
+<p>
+<blockquote>
+phi(N) = how many numbers between 1 and N&nbsp;-&nbsp;1 which are relatively
+prime to N.
+</blockquote>
+<p>
+Thus:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=right>phi(4)</td>
+<td align=left>= 2</td>
+<td align=left>&nbsp;&nbsp;&nbsp;(1 and 3 are relatively prime to 4),</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>phi(5)</td>
+<td align=left>= 4</td>
+<td align=left>&nbsp;&nbsp;&nbsp;(1, 2, 3, and 4 are relatively prime to 5),</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>phi(6)</td>
+<td align=left>= 2</td>
+<td align=left>&nbsp;&nbsp;&nbsp;(1 and 5 are relatively prime to 6),</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>phi(7)</td>
+<td align=left>= 6</td>
+<td align=left>&nbsp;&nbsp;&nbsp;(1, 2, 3, 4, 5, and 6 are relatively prime to 7),</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>phi(8)</td>
+<td align=left>= 4</td>
+<td align=left>&nbsp;&nbsp;&nbsp;(1, 3, 5, and 7 are relatively prime to 8), and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>phi(9)</td>
+<td align=left>= 6</td>
+<td align=left>&nbsp;&nbsp;&nbsp;(1, 2, 4, 5, 7, and 8 are relatively prime to 9).</td>
+</tr>
+</table>
+<p>
+<p>
+Here is the same definition expressed as C code:
+<p>
+<pre>
+        phi = 1;
+        for (i = 2 ; i &lt; N ; ++i)
+            if (gcd(i, N) == 1)
+                ++phi;
+</pre>
+<p>
+(By the way, notice that phi(1) is specially defined to be 1.)
+<p>
+It should be easy to see that phi(N) will be N&nbsp;-&nbsp;1 whenever N is
+prime. Somewhat less obvious is the useful fact that phi(N) is also
+easy to calculate when N has exactly two different prime factors:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>phi(P * Q) = (P - 1) * (Q - 1), if P and Q are prime.</td>
+</tr>
+</table>
+<p>
+(The proof of this fact is left as an exercise for the reader. It's
+actually not too hard.) Thus, for example:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>phi(15) = 2 * 4 = 8</td>
+<td align=left>&nbsp;&nbsp;&nbsp;(1, 2, 4, 7, 8, 11, 13, and 14).</td>
+</tr>
+</table>
+<p>
+<p>
+The two prime factors cannot be the same number for this to work, and
+in fact you can see above that phi(9) does not equal 4.
+<p>
+<a name="7"></a>
+<h2>
+Euler's Totient Theorem
+</h2>
+<p>
+This theorem is one of the important keys to the RSA algorithm:
+<p>
+<blockquote>
+If GCD(T,&nbsp;R)&nbsp;=&nbsp;1 and T&nbsp;&lt;&nbsp;R, then T^(phi(R))&nbsp;=&nbsp;1&nbsp;(mod&nbsp;R).
+</blockquote>
+<p>
+Or, in words:
+<p>
+<blockquote>
+If T and R are relatively prime, with T being the smaller number, then
+when we multiply T with itself phi(R) times and divide the result by
+R, the remainder will always be 1.
+</blockquote>
+<p>
+We can test this theorem on some smaller numbers for which we have
+already calculated the totient. Using 5 for T and 6 for R, we get:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>phi(6) = (2 - 1) * (3 - 1) = 1 * 2 = 2, so</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>5^(phi(6)) = 5^2 = 25, and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>25 = 24 + 1 = 6 * 4 + 1, therefore</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>25 = 1 (mod 6).</td>
+</tr>
+</table>
+<p>
+Using 2 for T and 15 for R, we have:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>phi(15) = (3 - 1) * (5 - 1) = 2 * 4 = 8, so</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>2^(phi(15)) = 2^8 = 256, and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>256 = 255 + 1 = 17 * 15 + 1, therefore</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>256 = 1 (mod 15).</td>
+</tr>
+</table>
+<p>
+<p>
+<a name="8"></a>
+<h2>
+Variations on a Theme
+</h2>
+<p>
+Here again is the equation of Euler's Totient Theorem:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(phi(R)) = 1 (mod R)</td>
+</tr>
+</table>
+<p>
+(remembering that T&nbsp;&lt;&nbsp;R, and T and R are relatively prime). Thanks to
+the way that modulus arithmetic works on multiplication, we can easily
+see that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(phi(R)) * T^(phi(R)) = 1 * 1 (mod R),</td>
+</tr>
+</table>
+<p>
+which can be rewritten, using the laws of exponents, as:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(phi(R) + phi(R)) = 1 * 1 (mod R),</td>
+</tr>
+</table>
+<p>
+or:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(2 * phi(R)) = 1 (mod R).</td>
+</tr>
+</table>
+<p>
+If we ran through this sequence again, we would get:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(3 * phi(R)) = 1 (mod R).</td>
+</tr>
+</table>
+<p>
+Clearly, we could keep doing this as many times as we like. So, we can
+expand on Euler's Totient Theorem, and state a more general corollary:
+<p>
+<blockquote>
+If GCD(T,&nbsp;R)&nbsp;=&nbsp;1 and T&nbsp;&lt;&nbsp;R, then T^(K&nbsp;*&nbsp;phi(R))&nbsp;=&nbsp;1&nbsp;(mod&nbsp;R), where K
+can be any number.
+</blockquote>
+<p>
+However, we can state this corrollary another way. Notice that if K
+can be any number, then K&nbsp;*&nbsp;phi(R) is just the set of numbers that are
+evenly divisible by phi(R). Or, in other words, the numbers that are
+congruent to zero, modulo phi(R). So:
+<p>
+<blockquote>
+If GCD(T,&nbsp;R)&nbsp;=&nbsp;1 and T&nbsp;&lt;&nbsp;R, then T^S&nbsp;=&nbsp;1&nbsp;(mod&nbsp;R) whenever
+S&nbsp;=&nbsp;0&nbsp;(mod&nbsp;phi(R)).
+</blockquote>
+<p>
+Now, let's tweak our equation further by multiplying both sides by T:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^S * T = 1 * T (mod R).</td>
+</tr>
+</table>
+<p>
+Simplifying leaves us with:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(S + 1) = T (mod R).</td>
+</tr>
+</table>
+<p>
+If we repeat this, we will get:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(S + 1) * T = T * T (mod R),</td>
+</tr>
+</table>
+<p>
+or:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(S + 2) = T^2 (mod R).</td>
+</tr>
+</table>
+<p>
+Doing this yet again will give us:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(S + 3) = T^3 (mod R),</td>
+</tr>
+</table>
+<p>
+and so on. This pattern looks familiar, doesn't it?
+<p>
+What makes it interesting this time is that S is <em>not</em> a multiple of
+R, but of phi(R). In other words, we have the rather surprising rule:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^E = T^F (mod R) whenever E = F (mod phi(R)).</td>
+</tr>
+</table>
+<p>
+(once again, only as long as T&nbsp;&lt;&nbsp;R, and T and R are relatively prime).
+<p>
+<a name="9"></a>
+<h2>
+The Plot Thickens
+</h2>
+<p>
+We are on the edge of something very important. Let's back up a bit
+and look at this equation more closely:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(S + 1) = T (mod R).</td>
+</tr>
+</table>
+<p>
+Notice what we have here. We take a number, T, and raise it to a
+power, and when we do the calculation in modulus arithmetic, we wind
+up with T again. In short, we have a recipe for a function that
+returns its own input (presuming that R has been chosen ahead of time,
+and that T is verified to be relatively prime to R).
+<p>
+If you're thinking to yourself, "What's so interesting about that?",
+then consider what we would have if we broke this function up into two
+separate steps. Specifically, let's imagine that we can find two new
+numbers P and Q such that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = S + 1, for one of the possible values of S.</td>
+</tr>
+</table>
+<p>
+Or, more to the point:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = 1 (mod phi(R))</td>
+</tr>
+</table>
+<p>
+Then we could write:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^(P * Q) = T (mod R),</td>
+</tr>
+</table>
+<p>
+which is equivalent to:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>(T^P)^Q = T (mod R),</td>
+</tr>
+</table>
+<p>
+and <em>this</em> is something that can be broken up into two steps:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^P = X (mod R), and then</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>X^Q = T (mod R).</td>
+</tr>
+</table>
+<p>
+Now, if you don't see the value in doing this, imagine now that the two
+steps are performed on separate computers. And that X is sent from the
+first computer to the second over an insecure phone line....
+<p>
+<a name="10"></a>
+<h2>
+Does This Really Work?
+</h2>
+<p>
+T stands for the plaintext, the message that is to be sent. P, Q, and
+R together form the cipher's keys -- P and R make up the public key,
+and Q and R make up the private key. And X becomes the encrypted
+message.
+<p>
+Here, again, is the central equation that makes it work:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = 1 (mod phi(R))</td>
+</tr>
+</table>
+<p>
+Note here that P and Q will both automatically be relatively prime to
+phi(R). (Why? Because if either P or Q had a factor in common with
+phi(R), then P&nbsp;*&nbsp;Q would also have that as a factor. But we know that
+P&nbsp;*&nbsp;Q divided by phi(R) leaves a remainder of one.) This is important.
+<p>
+Imagine a clockface, with just an hour hand, and imagine yourself
+placing the hour hand on midnight and then moving it forward by
+jumps, over and over, each jump covering N hours. If you pick a value
+for N that is divisible by 2 or 3 (the prime factors of 12), then you
+will find that you will only hit certain numbers before you return to
+midnight, and the sequence will then repeat. If N is 2, then the hour
+hand will visit 12, 2, 4, 6, 8, 10, 12, 2, 4, 6, 8, 10, 12&nbsp;...
+<p>
+If, however, your N is relatively prime with 12, then you will wind up
+hitting every number exactly once before finally returning to midnight
+12 jumps later. For example, using 7 for your N, the itinerary would
+be: 12, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5, 12,&nbsp;... In addition, the
+<em>order</em> in which you visit the numbers is entirely dependent on what
+value you pick for N.
+<p>
+In a similar vein, it is important that both P and Q be relatively
+prime to phi(R). Because of this, we know that every possible value
+for T, when raised to the power P modulo R, will land on a different
+number. (Remember that when doing exponents in modulus arithmetic, it
+is actually phi(R), and not R itself, that determines the length of
+the cycles.) If this weren't true -- if P, for example, shared a
+factor in common with phi(R) -- then some values for T could get
+mapped to the same value for X, and it would clearly be impossible to
+tell which was originally which. There could not be one value for Q
+that would correctly map X back to T every time.
+<p>
+The question of which T-values will wind up going to which X-values
+depends entirely on the value used for P -- and here's the rub for the
+would-be codebreaker: Just about every possible mapping of T-values to
+X-values does in fact exist. Somewhere out there is a P that will make
+that mapping.
+<p>
+If this:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^P = X</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>X^Q = T</td>
+</tr>
+</table>
+<p>
+was the cipher's scheme, there'd be no cipher. With P already being
+public knowledge, it would be trivial to take an X and compute
+backwards to T. But, instead, we have this:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T^P = X (mod R)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>X^Q = T (mod R)</td>
+</tr>
+</table>
+<p>
+as the cipher's scheme, and that changes everything. The modulus
+arithmetic erases too much information. There's no way to deduce how
+many times the hour hand needs to spin around the clockface when Q
+turns X back into T. Without knowing what Q is, a given X could wind
+up going to <em>any</em> of the possible values for T.
+<p>
+But what is really maddening to our would-be codebreaker is that even
+when T and P and X are all known, Q still can't be deduced! (Of
+course, it actually can -- but not necessarily within anyone's
+lifetime. But we're getting ahead of ourselves.)
+<p>
+So, let's see how to make this recipe work.
+<p>
+<hr>
+<p>
+<a name="11"></a>
+<h2>
+Making a Pair of Keys
+</h2>
+<p>
+To construct our own personal cipher keys, we need an appropriate
+value for R. So, we start by randomly picking two prime numbers, U and
+V, and multiplying them together:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>R = U * V.</td>
+</tr>
+</table>
+<p>
+There are two good reasons for selecting a value for R that has
+exactly two prime factors. First of all, we have an easy formula for
+calculating phi(R):
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>phi(R) = (U - 1) * (V - 1).</td>
+</tr>
+</table>
+<p>
+Secondly, we want R to be hard to factor. The fewer factors a number
+has, the longer it takes to find them.
+<p>
+We then need to find values for P and Q such that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = 1 (mod phi(R)).</td>
+</tr>
+</table>
+<p>
+When the numbers have been chosen, P and R together become the public
+key, and Q and R make up the private key. U and V are no longer
+needed, and can be forgotten.
+<p>
+<a name="12"></a>
+<h2>
+An Example
+</h2>
+<p>
+In order to see all this in action, we want to stick with numbers that
+we can actually work with. So, for our example, we will select the
+primes 5 and 11 to be our U and V. This gives R a value of 55, and:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>phi(55) = (5 - 1) * (11 - 1) = 4 * 10 = 40.</td>
+</tr>
+</table>
+<p>
+Now, we need to find numbers to fit the equation:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = 1 (mod 40).</td>
+</tr>
+</table>
+<p>
+There are, of course, an infinite number of pairs that will fit this
+equation. So, let's find one of them.
+<p>
+Our only initial constraint is that P and Q are both relatively prime
+to 40. So, we can't use numbers that are multiples of 2 and/or 5. We
+also don't want P and Q to be congruent mod 40, since that would turn
+our trapdoor cipher into a garden-variety symmetric cipher. Ideally,
+in fact, we'd prefer that P and Q be relatively prime to each other.
+Let's start with 7, which we'll assign to P:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>7 * Q = 1 (mod 40).</td>
+</tr>
+</table>
+<p>
+What would that make Q? If we rewrite this equation to get rid of the
+unfamiliar modulus arithmetic, we have:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>7 * Q = K * 40 + 1, where K can be any number.</td>
+</tr>
+</table>
+<p>
+The first value for Q that works is 23:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>7 * 23 = 161 = 4 * 40 + 1.</td>
+</tr>
+</table>
+<p>
+So we have 7 for P, our public key, and 23 for Q, our private key.
+<p>
+To make our cipher work, you may recall that the values we use for T
+must be less than R, and also relatively prime to R. We also don't
+want to use 1 for T, because 1 raised to any power whatsoever is going
+to remain 1. Finally, the same holds true for R - 1, because R - 1 is
+congruent to -1, modulo R.
+<p>
+So, we'll take what's left and create the following character set:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;2</td>
+<td align=right>&nbsp;3</td>
+<td align=right>&nbsp;4</td>
+<td align=right>&nbsp;6</td>
+<td align=right>&nbsp;7</td>
+<td align=right>&nbsp;8</td>
+<td align=right>&nbsp;9</td>
+<td align=right>12</td>
+<td align=right>13</td>
+<td align=right>14</td>
+<td align=right>16</td>
+<td align=right>17</td>
+<td align=right>18</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;A</td>
+<td align=right>&nbsp;B</td>
+<td align=right>&nbsp;C</td>
+<td align=right>&nbsp;D</td>
+<td align=right>&nbsp;E</td>
+<td align=right>&nbsp;F</td>
+<td align=right>&nbsp;G</td>
+<td align=right>&nbsp;H</td>
+<td align=right>&nbsp;I</td>
+<td align=right>&nbsp;J</td>
+<td align=right>&nbsp;K</td>
+<td align=right>&nbsp;L</td>
+<td align=right>&nbsp;M</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>19</td>
+<td align=right>21</td>
+<td align=right>23</td>
+<td align=right>24</td>
+<td align=right>26</td>
+<td align=right>27</td>
+<td align=right>28</td>
+<td align=right>29</td>
+<td align=right>31</td>
+<td align=right>32</td>
+<td align=right>34</td>
+<td align=right>36</td>
+<td align=right>37</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;N</td>
+<td align=right>&nbsp;O</td>
+<td align=right>&nbsp;P</td>
+<td align=right>&nbsp;Q</td>
+<td align=right>&nbsp;R</td>
+<td align=right>&nbsp;S</td>
+<td align=right>&nbsp;T</td>
+<td align=right>&nbsp;U</td>
+<td align=right>&nbsp;V</td>
+<td align=right>&nbsp;W</td>
+<td align=right>&nbsp;X</td>
+<td align=right>&nbsp;Y</td>
+<td align=right>&nbsp;Z</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>38</td>
+<td align=right>39</td>
+<td align=right>41</td>
+<td align=right>42</td>
+<td align=right>43</td>
+<td align=right>46</td>
+<td align=right>47</td>
+<td align=right>48</td>
+<td align=right>49</td>
+<td align=right>51</td>
+<td align=right>52</td>
+<td align=right>53</td>
+<td align=right>&nbsp;</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>sp</td>
+<td align=right>&nbsp;0</td>
+<td align=right>&nbsp;1</td>
+<td align=right>&nbsp;2</td>
+<td align=right>&nbsp;3</td>
+<td align=right>&nbsp;4</td>
+<td align=right>&nbsp;5</td>
+<td align=right>&nbsp;6</td>
+<td align=right>&nbsp;7</td>
+<td align=right>&nbsp;8</td>
+<td align=right>&nbsp;9</td>
+<td align=right>&nbsp;*</td>
+<td align=right>&nbsp;</td>
+</tr>
+</table>
+<p>
+<p>
+The message we will encrypt is "VENIO" (Latin for "I come"):
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;V</td>
+<td align=right>&nbsp;E</td>
+<td align=right>&nbsp;N</td>
+<td align=right>&nbsp;I</td>
+<td align=right>&nbsp;O</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>31</td>
+<td align=right>&nbsp;7</td>
+<td align=right>19</td>
+<td align=right>13</td>
+<td align=right>21</td>
+</tr>
+</table>
+<p>
+<p>
+To encode it, we simply need to raise each number to the power of P
+modulo R.
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>V:</td>
+<td align=right>31^7 (mod 55) =</td>
+<td align=right>27512614111 (mod 55) =</td>
+<td align=right>26</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>E:</td>
+<td align=right>&nbsp;7^7 (mod 55) =</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;823543 (mod 55) =</td>
+<td align=right>28</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>N:</td>
+<td align=right>19^7 (mod 55) =</td>
+<td align=right>&nbsp;&nbsp;893871739 (mod 55) =</td>
+<td align=right>24</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>I:</td>
+<td align=right>13^7 (mod 55) =</td>
+<td align=right>&nbsp;&nbsp;&nbsp;62748517 (mod 55) =</td>
+<td align=right>&nbsp;7</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>O:</td>
+<td align=right>21^7 (mod 55) =</td>
+<td align=right>&nbsp;1801088541 (mod 55) =</td>
+<td align=right>21</td>
+</tr>
+</table>
+<p>
+<p>
+So, our encrypted message is 26,&nbsp;28,&nbsp;24,&nbsp;7,&nbsp;21 -- or "RTQEO" in our
+personalized character set.
+<p>
+When the message "RTQEO" arrives on the other end of our insecure
+phone line, we can decrypt it simply by repeating the process -- this
+time using Q, our private key, in place of P.
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>R:</td>
+<td align=right>26^23 (mod 55) =</td>
+<td align=right>&nbsp;350257144982200575261531309080576 (mod 55) =</td>
+<td align=right>31</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>T:</td>
+<td align=right>28^23 (mod 55) =</td>
+<td align=right>1925904380037276068854119113162752 (mod 55) =</td>
+<td align=right>&nbsp;7</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>Q:</td>
+<td align=right>24^23 (mod 55) =</td>
+<td align=right>&nbsp;&nbsp;55572324035428505185378394701824 (mod 55) =</td>
+<td align=right>19</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>E:</td>
+<td align=right>&nbsp;7^23 (mod 55) =</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;27368747340080916343 (mod 55) =</td>
+<td align=right>13</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>O:</td>
+<td align=right>21^23 (mod 55) =</td>
+<td align=right>&nbsp;&nbsp;&nbsp;2576580875108218291929075869661 (mod 55) =</td>
+<td align=right>21</td>
+</tr>
+</table>
+<p>
+<p>
+The result is 31,&nbsp;7,&nbsp;19,&nbsp;13,&nbsp;21 -- or "VENIO", our original message.
+<p>
+<a name="13"></a>
+<h2>
+How to Crack RSA
+</h2>
+<p>
+Now, let's switch hats. Imagine that we've just managed to pluck the
+message "RTQEO" off of our wiretap. By looking up the message's
+destination in the public-key directory, we find that our message was
+encrypted with a value of 55 for R and 7 for P. How do we go about
+decrypting it when we don't know the value for Q?
+<p>
+Well, we know that that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = 1 (mod phi(R)),</td>
+</tr>
+</table>
+<p>
+or, without the modulus arithmetic:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = K * phi(R) + 1.</td>
+</tr>
+</table>
+<p>
+We can divide both sides of the equation by P, which gives us a
+formula for Q:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>Q = (K * phi(R) + 1) / P.</td>
+</tr>
+</table>
+<p>
+K is also unknown, though, so we will try plugging in different
+numbers for K, and look for values for Q that meet all the necessary
+constraints.
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=right>(1 * 40 + 1) / 7 =</td>
+<td align=right>&nbsp;41 / 7</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(doesn't divide evenly)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>(2 * 40 + 1) / 7 =</td>
+<td align=right>&nbsp;81 / 7</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(ditto)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>(3 * 40 + 1) / 7 =</td>
+<td align=right>121 / 7</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(ditto)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>(4 * 40 + 1) / 7 =</td>
+<td align=right>161 / 7</td>
+<td align=right>= 23</td>
+<td align=left>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(this could be it!)</td>
+</tr>
+</table>
+<p>
+<p>
+Each time we find a candidate for Q, we can test it out on the
+message. We might get gibberish, in which case we can continue
+searching. If 23 hadn't worked and we needed to continue the search,
+it would be pretty obvious that we only needed to test every seventh
+number, since those are the only numbers which will give us a result
+that is evenly divisible by 7. Furthermore, we only need to test
+values up 39, thanks to the modulus arithmetic. So, even though this
+process involves a brute-force search, it is very simple and very
+fast.
+<p>
+Well then, so what's the catch? Simply that, in order to do any of
+this, we first need to know the value of phi(R). Of course, we already
+know that R has exactly two prime factors, so calculating phi(R) is a
+snap once we know what those factors are.
+<p>
+Famous last words.
+<p>
+<hr>
+<p>
+<a name="14"></a>
+<h2>
+How to Make RSA Uncrackable
+</h2>
+<p>
+Of course, in our case the factors of R can be found by consulting a
+times table. So it's not much of a challenge. (For that matter, since
+we're encrypting one character at a time, our coded messages would
+also be vulnerable to good old-fashioned cryptanalysis).
+<p>
+To make it less easy to find R's factors, we need to pick larger prime
+numbers for U and V to begin with. If, instead of 5 and 11, we had
+chosen 673 and 24971, we would have a value of 16805483 for R, and
+phi(R) would be 16779840. (This would also give us enough room to
+encrypt more than one byte at a time, which seriously reduces the
+vulnerability to cryptanalysis.)  Looking for a P and Q pair is no
+longer something you want to do with pencil and paper, of course, but
+it took me less than three minutes to find the usable pair 397 and
+211333 -- including the time it took to write and debug a Perl script.
+<p>
+On the other hand, it also took me less than three <em>seconds</em> to run
+"factor" on 16805483 to obtain 673 and 24971. Armed with those
+numbers, it wouldn't take much longer to derive 211333 from 397. So
+even these numbers aren't close to being large enough. We need
+<em>really</em> big numbers.
+<p>
+Well, we can certainly find huge values for R that are difficult to
+factor. But how far can we go before it becomes too difficult for us
+to use the number in the first place?
+<p>
+<a name="15"></a>
+<h2>
+Huge Exponents in Modulus Arithmetic
+</h2>
+<p>
+The problem is this: The bigger R gets, the bigger P and Q will be,
+and P and Q are to be used as exponents! Even the relatively
+tame-looking
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>9^(9^9)</td>
+</tr>
+</table>
+<p>
+produces a number over 350 million decimal digits long. How are we
+going to be able to encrypt anything without needing terabytes of
+storage?
+<p>
+The trick is that we only need to calculate these exponential values
+modulo R. As always, modulus arithmetic simplifies things a great
+deal.
+<p>
+Let's revisit our example, and look at how we could decrypt the number
+28, remembering that R&nbsp;=&nbsp;55 and Q&nbsp;=&nbsp;23:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>28^23 (mod 55) = ?</td>
+</tr>
+</table>
+<p>
+To start with, we look at Q's binary representation. 23 in binary is
+10111, which means that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>23 = 16 + 4 + 2 + 1, or</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>23 = 2^4 + 2^2 + 2^1 + 2^0.</td>
+</tr>
+</table>
+<p>
+We can now break the exponential calculation apart into several
+smaller ones:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=right>28^23</td>
+<td align=left>= 28^(2^4 + 2^2 + 2^1 + 2^0)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 28^(2^4) * 28^(2^2) * 28^(2^1) * 28^(2^0)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 28^(2 * 2 * 2 * 2) * 28^(2 * 2) * 28^2 * 28</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= (((28^2)^2)^2)^2 * (28^2)^2 * 28^2 * 28.</td>
+</tr>
+</table>
+<p>
+<p>
+This may look like anything but an improvement, at first. But on a
+closer examination, you'll see that we actually have many repeated
+subterms. This simplifies matters, particularly when we take
+advantage of the fact that we are calculating in modulo 55.
+<p>
+We compute the first square in modulus arithmetic:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>28^2 = 784 = 14 (mod 55).</td>
+</tr>
+</table>
+<p>
+By substituting this value into our equation:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>28^23 = (((28^2)^2)^2)^2 * (28^2)^2 * 28^2 * 28 (mod 55),</td>
+</tr>
+</table>
+<p>
+we get:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>28^23 = ((14^2)^2)^2 * 14^2 * 14 * 28 (mod 55).</td>
+</tr>
+</table>
+<p>
+Now by computing that square:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>14^2 = 196 = 31 (mod 55),</td>
+</tr>
+</table>
+<p>
+we will have:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>28^23 = (31^2)^2 * 31 * 14 * 28 (mod 55).</td>
+</tr>
+</table>
+<p>
+And, finally:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>31^2 = 961 = 26 (mod 55), and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>26^2 = 676 = 16 (mod 55);</td>
+</tr>
+</table>
+<p>
+and so:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>28^23 = 16 * 31 * 14 * 28 (mod 55).</td>
+</tr>
+</table>
+<p>
+We can continue to take advantage of the modulus when we do the final
+multiplications:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=right>28^23</td>
+<td align=left>= 16 * 31 * 14 * 28 (mod 55)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 16 * 31 * 392 (mod 55)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 16 * 31 * 7 (mod 55)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 16 * 217 (mod 55)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 16 * 52 (mod 55)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 832 (mod 55)</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=right>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td align=left>= 7 (mod 55)</td>
+</tr>
+</table>
+<p>
+<p>
+Lo and behold: 7, the same result as when we did it the hard way.
+<p>
+This binary technique is really no different than how computers
+normally compute integer powers. However, the fact that we can break
+the process down to successive multiplications allows us to apply the
+modulus at every step of the way. This assures us that at no point
+will our algorithm have to handle a number larger than (R&nbsp;-&nbsp;1)^2.
+<p>
+<a name="16"></a>
+<h2>
+Huge Factors in Modulus Arithmetic
+</h2>
+<p>
+The magic of modulus arithmetic will also ensure that it's possible to
+find our P and Q pair. Remember that, after we've selected some
+humongous value for R, we need to find values to fit:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = 1 (mod phi(R)),</td>
+</tr>
+</table>
+<p>
+or, without the modulus arithmetic:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q = K * phi(R) + 1, where K is any number.</td>
+</tr>
+</table>
+<p>
+After picking a likely value for P -- which probably will <em>not</em> be a
+conveniently small number like 7 -- we will need to find a matching Q.
+By rewriting the above as:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>P * Q - phi(R) * K = 1,</td>
+</tr>
+</table>
+<p>
+with known values for P and phi(R), we have what is called a
+<def>Diophantine equation</def>. This really just means that we have more
+unknowns than equations. However, it also means that algorithms exist
+for solving it, the most well-known one being Euler's. (One thing you
+quickly discover when you dabble in number theory is that a lot of
+things are named after Euler.) While it's still not something you'd
+want to do with pencil and paper, it doesn't involve anything more
+advanced than a whole lot of long division. In short, it's something
+that a computer can do in a relatively brief amount of time.
+<p>
+<a name="17"></a>
+<h2>
+Safety in Numbers
+</h2>
+<p>
+Okay. So we know that the whole process is still practical, even if R
+is immense. But all of this is still moot unless we can select an R in
+the first place. R has to be the product of two prime numbers, don't
+forget. If we want R to be so big that it can't be factored easily,
+how are we going to find those factors to begin with?
+<p>
+It turns out that there is an interesting little asymmetry here.
+Determining whether or not a number is prime happens to be a
+relatively cheap process.
+<p>
+One of the most famous methods for testing a number for primality uses
+<def>Fermat's Little Theorem</def>. Here is the version of this Theorem that
+we're interested in:
+<p>
+<blockquote>
+If P is prime, then N^(P&nbsp;-&nbsp;1)&nbsp;=&nbsp;1&nbsp;(mod&nbsp;P) is true for every number
+N&nbsp;&lt;&nbsp;P.
+</blockquote>
+<p>
+Does this seems suspiciously reminiscent of Euler's Totient Theorem?
+It should. Euler was the first person to publish a proof of Fermat's
+Little Theorem, and his Totient Theorem is a generalization of
+Fermat's. You can see this for yourself by remembering that
+phi(P)&nbsp;=&nbsp;P&nbsp;-&nbsp;1 when P is prime.
+<p>
+Of course, as far as proofs go, this theorem is only useful for
+proving that a given number is composite. For example, it just so
+happens that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>4^14 (mod 15) = 268435456 (mod 15) = 1,</td>
+</tr>
+</table>
+<p>
+even though 15 is no prime. Nonetheless, it is also true that:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>3^14 (mod 15) = 4782969 (mod 15) = 9, and</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>5^14 (mod 15) = 6103515625 (mod 15) = 10.</td>
+</tr>
+</table>
+<p>
+On the other hand, 17, which <em>is</em> prime, results in 1 every time:
+<p>
+<table>
+<tr>
+<td>&nbsp;</td>
+<td align=left>3^16 (mod 17) = 43046721 (mod 17) = 1,</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>4^16 (mod 17) = 4294967296 (mod 17) = 1,</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align=left>5^16 (mod 17) = 152587890625 (mod 17) = 1, and so on.</td>
+</tr>
+</table>
+<p>
+So, if we want to know if a number is prime, we can run it through
+this test, using (say) 2 as the base. If anything besides 1 results,
+we know with certainty that the number is composite. If the answer is
+1, however, we try the test again with 3, and then 4, and so on. If we
+keep getting back 1 as the result, it soon becomes rather unlikely
+that the number is anything but prime. 
+<p>
+Unlikely, mind you, but not impossible. There are a handful of numbers
+which pass this test for every base, but which are not prime. Called
+<def>Carmichael numbers</def>, they are far more rare than the prime numbers --
+but, like the primes numbers, there are still an infinite number of
+them. So we wouldn't want to rely on this test alone.
+<p>
+Fortunately, there are other tests for primality which are more
+reliable. But they all have at least one thing in common with this
+test: When they reject a number, they tell us only that the number can
+be factored. The test results give us no information at all as to what
+the factors might be. How unfortunate!
+<p>
+Unfortunate for the mathematicians, that is. Very fortunate for us.
+<p>
+<a name="18"></a>
+<h2>
+Summing Up
+</h2>
+<p>
+The basic truth is that, in order to find the factors of a composite
+number, we're pretty much stuck with using brute force: Divide the
+number by all the primes you can get your hands on until one of them
+goes in evenly. There are plenty of ways to improve on this approach
+(the <def>Number Field Sieve</def> currently being the best), but they are
+complicated, and all they do is allow you to narrow the scope of the
+search. They don't reduce the search enough to make this problem
+tractable in general.
+<p>
+Nor is it likely that new approaches will, either! The real issue is
+that the encrypting and decrypting algorithms have a running time that
+is linear with respect to the length of R. That is to say, doubling
+the number of digits in R doubles the amount of time (roughly) needed
+to encrypt, decrypt, and to select the two primes to make a key
+with. But the algorithms for factoring R have a running time that is
+exponential with respect to the length of R. That is to say, the
+time (roughly) doubles with every few digits! (Because every digit
+added to R makes it ten times larger, and thus multiplies the number
+of potential candidates for its measly two factors.)
+<p>
+So if a new technique is suddenly found that makes it a trillion times
+faster to factor a number, all we have to do is increase the size of R
+we use by enough digits, and the situation will be right back where it
+started -- and all it means to us is that it takes a little bit longer
+to send and receive our messages. Already some people are using keys
+that, in order to factor with the Number Field Sieve, would require
+more energy than exists in the known universe.
+<p>
+An illustration: At the time of my writing, one of the largest general
+numbers that has been independently factored was the number used as
+the modulus for the RSA-140 challenge. (By "general numbers", I'm
+excluding creatures like Mersenne numbers and Fermat numbers, which
+have specialized factoring techniques that are inapplicable
+elsewhere.) It was completed on February 2, 1999. Now, the record
+previous to this was the RSA-130 number, and the process of factoring
+it was estimated as taking a total of 1000 MIPS-years of computer
+time. RSA-140, a number only 10 decimal digits longer, required
+<em>twice</em> that amount.
+<p>
+This, finally, is the heart of what makes RSA a trapdoor function: the
+gap between obtaining a number with two prime factors, and
+rediscovering the factors from the number itself. And the gap just
+keeps expanding as the numbers get larger.
+<p>
+The breakthrough that would completely destroy RSA's security would be
+an algorithm that actually produced a number's factors directly,
+instead of merely narrowing the search's scope. Such a thing has not
+been proven impossible, and it may well be that such a proof will
+never be found. But considering that prime numbers have been studied
+for thousands of years, and given the renewed attention that has been
+focused on this problem in the last few decades, the likelihood of the
+existence of such an algorithm appears very remote. Discovering one
+would change the face of number theory as much as RSA has changed the
+face of cryptography.
+<p>
+However -- if this <em>were</em> to happen, there are other trapdoor
+functions out there, waiting to be found. Whatever the future of RSA
+may be, the trapdoor cipher has certainly changed the face of
+cryptography forever.
+<p>
+<hr>
+<p>
+<a name="19"></a>
+<h2>
+References
+</h2>
+<p>
+1. Clawson, Calvin C.: "Mathematical Mysteries", 1996, Plenum Press.
+   (Clawson devotes an entire chapter to the mathematics behind RSA,
+   and it is this that gave me the inspiration to create this text.)
+<p>
+2. Benson, Donald C.: "The Moment of Proof", 1999, Oxford University
+   Press. (Like the previous one, this fine book discusses the
+   mathematics of RSA alongside of many other topics.)
+<p>
+3. Gardner, Martin: "Penrose Tiles to Trapdoor Ciphers", 1989, W.H.
+   Freeman &amp; Co. (This is another anthology of Gardner's wonderful
+   columns for "Scientific American", and includes the column which
+   was the first widely published description of the RSA cipher -- the
+   one which set the NSA to frantically running around in circles.)
+<p>
+4. Ribenboim, Paulo: "The Little Book of Big Primes", 1991,
+   Springer-Verlag. (The title should actually be "The Little Book of
+   Big Number Theory" -- the book is chock full of theorems and
+   conjectures that relate to prime numbers.)
+<p>
+5. Devlin, Keith: "All the Math that's Fit to Print", 1994, The
+   Mathematical Association of America. (A collection of short columns
+   from The Manchester Guardian, in which I learned that the set of
+   Carmichael numbers has been proven to be infinite.)
+<p>
+6. Wells, David: "The Penguin Dictionary of Curious and Interesting
+   Numbers", 1986, Penguin Books. (I had to pull this out at the last
+   minute to find out how many digits were in 9^(9^9). For the curious
+   whose libraries lack this little gem, the exact number of digits is
+   369693100.)
+<p>
+Thanks to readers Joel Sturman and Lee Sloan for pointing out errors
+and ommisions in previous drafts.
+<p>
+<hr>
+<p>
+<br>
+<font size=-1><a href="http://www.muppetlabs.com/~breadbox/txt/">Texts</a>
+</font>
+<br>
+<font size=-1><a href="http://www.muppetlabs.com/~breadbox/">Brian
+Raiter</a></font>
+<br>
+<font size=-1><a href="http://www.muppetlabs.com/">Muppetlabs</a></font>
+</body>
+</html>
