@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# settings
+
+name="nflogd"
+daemon="/home/ury/bin/$name"
+channel="1"
+pidfile="/tmp/nflogd.pid"
+errfile="/tmp/nflogd.err"
+logfile="/tmp/nflogd.txt"
+pcapfile="/tmp/nflogd.pcap"
+
+# RC
+
+case "$1" in
+	start)
+		$daemon --channel $channel \
+                --pcap $pcapfile \
+                --daemon $logfile \
+                --pid $pidfile \
+				--user nobody \
+                2> $errfile
+		;;
+
+	stop)
+		if test -f $pidfile;
+		then
+			kill `cat $pidfile`
+		else
+			echo "pidfile [$pidfile] not exists"
+		fi
+		;;
+
+	restart)
+		$0 stop
+		$0 start
+		;;
+
+	rotate)
+		if test -f $pidfile;
+		then
+			kill -HUP `cat $pidfile`
+		else
+			echo "pidfile [$pidfile] not exists"
+		fi
+		;;
+
+	status)
+		if test -f $pidfile;
+		then
+			if /bin/kill -0 `cat $pidfile` 2> /dev/null ; then
+				echo "$name is running"
+			else
+				echo "pidfile exists but $name not running"
+			fi
+		else
+			echo "$name is stopped"
+		fi
+
+		;;
+	*)
+		echo "use arguments: {start|stop|restart|rotate|status}"
+		exit 1
+esac
+exit 0
+

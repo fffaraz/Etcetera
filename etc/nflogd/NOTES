@@ -1,0 +1,64 @@
+
+SAMPLE SETUP:
+  iptables -A INPUT .... -j NFLOG --nflog-group=1
+  nflogd --channel 1
+
+  now nflogd will get packets from iptables and log.
+
+
+PCAP:
+
+  nflogd have ability to write a pcap file
+  with packets it get.
+
+  #nflogd --channel 1 --pcap d1.pcap
+
+  ethernet header is reconstructed in form:
+  destination: FACE out-dev
+  source: FACE in-dev
+
+  say fa:ce:02:00:00:00 - mean 2'nd interface
+
+  timestamp not always available,
+  so it can be 0
+
+
+ROTATE LOG/PCAP FILES:
+  HUP signal cause to reopen log(if daemon) and pcap files.
+
+  so, you should `mv` files first
+  and `kill -HUP` second.
+  btw, be careful, if you run nflogd as user, check if this user can write/create logfile
+
+DAEMON MODE:
+  if run with `--daemon logfile.txt` - nflogd will run in daemon mode
+  and logs to file (not a stdout).
+
+  error messages can be lost - you must redirect stderr
+  to file or pipe.
+
+
+
+PERFORMANCE:
+  i not expect nflog to be a high performance.
+
+  it used to collect some packets at my home laptop
+  (don't like to trash dmesg with -j LOG target)
+
+
+SAMPLE LOG:
+  TS    indev  outdev   iplen         src            dest       proto    sport   dport
+  0.0     2       0       48      77.37.234.10    192.168.4.2    UDP     24468   44881
+  0.0     2       0       55      87.117.182.68   192.168.4.2    TCP     9939    6236
+  0.0     2       0       67      87.117.182.68   192.168.4.2    TCP     9939    6236
+  0.0     2       0       55      94.181.37.208   192.168.4.2    TCP     5796    25883
+  0.0     2       0       63      94.181.37.208   192.168.4.2    TCP     5796    25883
+  0.0     2       0       52      87.117.182.68   192.168.4.2    TCP     9939    6236
+  0.0     2       0       52      94.181.37.208   192.168.4.2    TCP     5796    25883
+
+  *for ICMP `type` and `code` is logged
+  *iplen is a length of ip packet including header
+
+
+
+
